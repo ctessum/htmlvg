@@ -45,7 +45,7 @@ Mauris et tellus sagittis, laoreet dui id, mollis erat. Duis ultrices facilisis 
 			height:   vg.Points(60),
 		},
 		{
-			html: `<h1>Heading 1</h1>
+			html: `<h1>Long Long Long Long Heading 1</h1>
 <p>Paragraph</p>
 <h2>Heading 2</h2>
 <p>Paragraph</p>
@@ -59,7 +59,7 @@ Mauris et tellus sagittis, laoreet dui id, mollis erat. Duis ultrices facilisis 
 <p>Paragraph</p>`,
 			filename: "testdata/headings.png",
 			width:    vg.Points(100),
-			height:   vg.Points(250),
+			height:   vg.Points(290),
 		},
 		{
 			html:     `<p>Here we try some <strong>bold</strong> and <em>italic</em> text.</p>`,

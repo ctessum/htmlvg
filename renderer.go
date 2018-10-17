@@ -14,11 +14,11 @@ import (
 
 // Renderer to renders HTML to a gonum.org/v1/plot/vg.Canvas.
 type Renderer struct {
-	dc draw.Canvas
-	mx sync.Mutex
-	at vg.Point
-
-	sty draw.TextStyle
+	dc         draw.Canvas
+	mx         sync.Mutex
+	at         vg.Point
+	sty        draw.TextStyle
+	lineHeight vg.Length
 
 	// Font, BoldFont, and ItalicFont are the names of the fonts
 	// to be used for regular, bold, italic, and bold-italic text, respectively.
@@ -165,6 +165,7 @@ func (r *Renderer) element(e *html.Node) error {
 // paragraph renders an HTML p element.
 func (r *Renderer) paragraph(p *html.Node) error {
 	r.at = vg.Point{X: 0, Y: r.at.Y - r.Size*vg.Length(r.PMarginTop)}
+	r.lineHeight = r.sty.Font.Size
 	for c := p.FirstChild; c != nil; c = c.NextSibling {
 		if err := r.draw(c); err != nil {
 			return err
@@ -207,6 +208,7 @@ func (r *Renderer) heading(h *html.Node, scale, marginTop, marginBottom float64,
 	r.at.X = r.dc.Min.X
 	r.at.Y -= r.Size * vg.Length(marginTop)
 	r.sty.Font.Size *= vg.Length(scale)
+	r.lineHeight = r.sty.Font.Size
 	for c := h.FirstChild; c != nil; c = c.NextSibling {
 		if err := r.draw(c); err != nil {
 			return err
@@ -268,7 +270,7 @@ func (r *Renderer) writeLines(text string, sty draw.TextStyle) {
 			}
 			r.dc.FillText(sty, r.at, line)
 			r.at.X = r.dc.Min.X
-			r.at.Y -= r.Size
+			r.at.Y -= r.lineHeight
 			line = ""
 		} else {
 			line = str[lineStart:lineEnd]

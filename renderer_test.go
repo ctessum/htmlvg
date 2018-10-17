@@ -38,7 +38,7 @@ Mauris et tellus sagittis, laoreet dui id, mollis erat. Duis ultrices facilisis 
 			height:   vg.Points(210),
 		},
 		{
-			html: `<p>Superscript and subscript don't currently work will with line breaks.</p>
+			html: `<p>Superscript and subscript don't currently work well with line breaks.</p>
 <p>Here we try s<sup>u</sup>per<sub>s</sub>cript and s<sub>ubsc</sub>ript. H<sub>2</sub>O<sup>(2)</sub> PM<sub>2.5</sub>`,
 			filename: "testdata/supersub.png",
 			width:    vg.Points(150),
@@ -59,7 +59,13 @@ Mauris et tellus sagittis, laoreet dui id, mollis erat. Duis ultrices facilisis 
 <p>Paragraph</p>`,
 			filename: "testdata/headings.png",
 			width:    vg.Points(100),
-			height:   vg.Points(210),
+			height:   vg.Points(250),
+		},
+		{
+			html:     `<p>Here we try some <strong>bold</strong> and <em>italic</em> text.</p>`,
+			filename: "testdata/bolditalic.png",
+			width:    vg.Points(100),
+			height:   vg.Points(25),
 		},
 	}
 
@@ -68,12 +74,12 @@ Mauris et tellus sagittis, laoreet dui id, mollis erat. Duis ultrices facilisis 
 			c := vgimg.New(test.width, test.height)
 			dc := draw.New(c)
 
-			font, err := vg.MakeFont("Times-Roman", 10)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			r := NewRenderer(font)
+			r := NewRenderer()
+			r.Size = 10
+			r.Font = "Times-Roman"
+			r.BoldFont = "Times-Bold"
+			r.ItalicFont = "Times-Italic"
+			r.BoldItalicFont = "Times-BoldItalic"
 
 			if err := r.Draw(dc, []byte(test.html)); err != nil {
 				t.Fatal(err)
@@ -96,12 +102,12 @@ func TestRenderer_Draw_crop(t *testing.T) {
 	dc := draw.New(c)
 	dc = draw.Crop(dc, 20, 0, 0, -10)
 
-	font, err := vg.MakeFont("Times-Roman", 10)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	r := NewRenderer(font)
+	r := NewRenderer()
+	r.Size = 10
+	r.Font = "Times-Roman"
+	r.BoldFont = "Times-Bold"
+	r.ItalicFont = "Times-Italic"
+	r.BoldItalicFont = "Times-BoldItalic"
 
 	if err := r.Draw(dc, []byte("hello world!")); err != nil {
 		t.Fatal(err)

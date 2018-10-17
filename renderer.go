@@ -80,10 +80,11 @@ func NewRenderer() *Renderer {
 }
 
 // Draw renders the HTML input to canvas dc.
-func (r *Renderer) Draw(dc draw.Canvas, HTML []byte) error {
+// It returns the canvas coordinates of the cursor after drawing.
+func (r *Renderer) Draw(dc draw.Canvas, HTML []byte) (vg.Point, error) {
 	f, err := vg.MakeFont(r.Font, r.Size)
 	if err != nil {
-		return err
+		return r.at, err
 	}
 	r.sty = draw.TextStyle{
 		Font:   f,
@@ -98,35 +99,35 @@ func (r *Renderer) Draw(dc draw.Canvas, HTML []byte) error {
 	r.at = vg.Point{X: dc.Min.X, Y: dc.Max.Y}
 	doc, err := html.Parse(bytes.NewBuffer(HTML))
 	if err != nil {
-		return fmt.Errorf("htmlvg: %v", err)
+		return r.at, fmt.Errorf("htmlvg: %v", err)
 	}
 	return r.draw(doc)
 }
 
-func (r *Renderer) draw(n *html.Node) error {
+func (r *Renderer) draw(n *html.Node) (vg.Point, error) {
 	switch n.Type {
 	case html.ErrorNode:
-		return fmt.Errorf("htmlvg: node error: %+v", n)
+		return r.at, fmt.Errorf("htmlvg: node error: %+v", n)
 	case html.TextNode:
 		return r.text(n)
 	case html.DocumentNode, html.DoctypeNode, html.CommentNode:
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			if err := r.draw(c); err != nil {
-				return err
+			if at, err := r.draw(c); err != nil {
+				return at, err
 			}
 		}
 	case html.ElementNode:
-		if err := r.element(n); err != nil {
-			return err
+		if at, err := r.element(n); err != nil {
+			return at, err
 		}
 	default:
 		panic(fmt.Errorf("invalid node type %v", n.Type))
 	}
-	return nil
+	return r.at, nil
 }
 
 // element renders an HTML element.
-func (r *Renderer) element(e *html.Node) error {
+func (r *Renderer) element(e *html.Node) (vg.Point, error) {
 	switch e.Data {
 	case "p":
 		return r.paragraph(e)
@@ -152,54 +153,54 @@ func (r *Renderer) element(e *html.Node) error {
 		return r.subsuperscript(e, vg.Length(r.SubscriptPosition))
 	case "html", "head", "body":
 		for c := e.FirstChild; c != nil; c = c.NextSibling {
-			if err := r.draw(c); err != nil {
-				return err
+			if at, err := r.draw(c); err != nil {
+				return at, err
 			}
 		}
-		return nil
+		return r.at, nil
 	default:
-		return fmt.Errorf("htmlvg: '%s' not implemented", e.Data)
+		return r.at, fmt.Errorf("htmlvg: '%s' not implemented", e.Data)
 	}
 }
 
 // paragraph renders an HTML p element.
-func (r *Renderer) paragraph(p *html.Node) error {
+func (r *Renderer) paragraph(p *html.Node) (vg.Point, error) {
 	r.at = vg.Point{X: 0, Y: r.at.Y - r.Size*vg.Length(r.PMarginTop)}
 	r.lineHeight = r.sty.Font.Size
 	for c := p.FirstChild; c != nil; c = c.NextSibling {
-		if err := r.draw(c); err != nil {
-			return err
+		if at, err := r.draw(c); err != nil {
+			return at, err
 		}
 	}
 	r.at = vg.Point{X: 0, Y: r.at.Y - r.Size*(1+vg.Length(r.PMarginBottom))}
-	return nil
+	return r.at, nil
 }
 
 // text renders HTML normal text.
-func (r *Renderer) text(t *html.Node) error {
+func (r *Renderer) text(t *html.Node) (vg.Point, error) {
 	r.writeLines(t.Data, r.sty)
-	return nil
+	return r.at, nil
 }
 
 // subsuperscript renders superscript or subscript text.
-func (r *Renderer) subsuperscript(s *html.Node, position vg.Length) error {
+func (r *Renderer) subsuperscript(s *html.Node, position vg.Length) (vg.Point, error) {
 	r.sty.Font.Size *= vg.Length(r.SuperSubScale)
 	r.at.Y += r.sty.Font.Size * position
 	for c := s.FirstChild; c != nil; c = c.NextSibling {
-		if err := r.draw(c); err != nil {
-			return err
+		if at, err := r.draw(c); err != nil {
+			return at, err
 		}
 	}
 	r.at.Y -= r.sty.Font.Size * position
 	r.sty.Font.Size /= vg.Length(r.SuperSubScale)
-	return nil
+	return r.at, nil
 }
 
-func (r *Renderer) heading(h *html.Node, scale, marginTop, marginBottom float64, bold bool) error {
+func (r *Renderer) heading(h *html.Node, scale, marginTop, marginBottom float64, bold bool) (vg.Point, error) {
 	if bold {
 		f := r.sty.Font
 		if err := r.sty.Font.SetName(r.BoldFont); err != nil {
-			return err
+			return r.at, err
 		}
 		defer func() {
 			r.sty.Font = f
@@ -210,30 +211,30 @@ func (r *Renderer) heading(h *html.Node, scale, marginTop, marginBottom float64,
 	r.sty.Font.Size *= vg.Length(scale)
 	r.lineHeight = r.sty.Font.Size
 	for c := h.FirstChild; c != nil; c = c.NextSibling {
-		if err := r.draw(c); err != nil {
-			return err
+		if at, err := r.draw(c); err != nil {
+			return at, err
 		}
 	}
 	r.at.Y -= r.sty.Font.Size * vg.Length(marginBottom)
 	r.sty.Font.Size /= vg.Length(scale)
 	r.at.X = r.dc.Min.X
 	r.at.Y -= r.Size * vg.Length(marginBottom)
-	return nil
+	return r.at, nil
 }
 
 // newFont temporarily changes the font.
-func (r *Renderer) newFont(n *html.Node, font string) error {
+func (r *Renderer) newFont(n *html.Node, font string) (vg.Point, error) {
 	f := r.sty.Font
 	if err := r.sty.Font.SetName(font); err != nil {
-		return err
+		return r.at, err
 	}
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		if err := r.draw(c); err != nil {
-			return err
+		if at, err := r.draw(c); err != nil {
+			return at, err
 		}
 	}
 	r.sty.Font = f
-	return nil
+	return r.at, nil
 }
 
 // writeLines writes the given text to the canvas, inserting line breaks

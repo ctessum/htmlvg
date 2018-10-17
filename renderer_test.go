@@ -81,7 +81,7 @@ Mauris et tellus sagittis, laoreet dui id, mollis erat. Duis ultrices facilisis 
 			r.ItalicFont = "Times-Italic"
 			r.BoldItalicFont = "Times-BoldItalic"
 
-			if err := r.Draw(dc, []byte(test.html)); err != nil {
+			if _, err := r.Draw(dc, []byte(test.html)); err != nil {
 				t.Fatal(err)
 			}
 
@@ -109,7 +109,7 @@ func TestRenderer_Draw_crop(t *testing.T) {
 	r.ItalicFont = "Times-Italic"
 	r.BoldItalicFont = "Times-BoldItalic"
 
-	if err := r.Draw(dc, []byte("hello world!")); err != nil {
+	if _, err := r.Draw(dc, []byte("hello world!")); err != nil {
 		t.Fatal(err)
 	}
 

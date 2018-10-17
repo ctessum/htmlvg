@@ -168,7 +168,7 @@ func (r *Renderer) writeLines(text string, sty draw.TextStyle) {
 		lineEnd := lineStart + len(line) + 1 + nextBreak
 		if nextBreak == -1 {
 			out := str[lineStart:]
-			if r.at.X == 0 { // Remove any trailing space at the beginning of a line.
+			if r.at.X == r.dc.Min.X { // Remove any trailing space at the beginning of a line.
 				out = strings.TrimLeft(out, " ")
 			}
 			r.dc.FillText(sty, r.at, out)
@@ -178,11 +178,11 @@ func (r *Renderer) writeLines(text string, sty draw.TextStyle) {
 			// If we go to the next break, will the line be too long? If so,
 			// insert a line break.
 			lineStart += len(line)
-			if r.at.X == 0 { // Remove any trailing space at the beginning of a line.
+			if r.at.X == r.dc.Min.X { // Remove any trailing space at the beginning of a line.
 				line = strings.TrimLeft(line, " ")
 			}
 			r.dc.FillText(sty, r.at, line)
-			r.at.X = 0
+			r.at.X = r.dc.Min.X
 			r.at.Y -= sty.Font.Size
 			line = ""
 		} else {

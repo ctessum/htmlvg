@@ -73,3 +73,29 @@ Mauris et tellus sagittis, laoreet dui id, mollis erat. Duis ultrices facilisis 
 		})
 	}
 }
+
+func TestRenderer_Draw_crop(t *testing.T) {
+	c := vgimg.New(80, 30)
+	dc := draw.New(c)
+	dc = draw.Crop(dc, 20, 0, 0, -10)
+
+	font, err := vg.MakeFont("Times-Roman", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRenderer(font)
+
+	if err := r.Draw(dc, []byte("hello world!")); err != nil {
+		t.Fatal(err)
+	}
+
+	w, err := os.Create("testdata/hello_crop.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	pngc := vgimg.PngCanvas{Canvas: c}
+	if _, err := pngc.WriteTo(w); err != nil {
+		t.Fatal(err)
+	}
+}

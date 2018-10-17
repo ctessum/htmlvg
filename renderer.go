@@ -165,14 +165,14 @@ func (r *Renderer) element(e *html.Node) (vg.Point, error) {
 
 // paragraph renders an HTML p element.
 func (r *Renderer) paragraph(p *html.Node) (vg.Point, error) {
-	r.at = vg.Point{X: 0, Y: r.at.Y - r.Size*vg.Length(r.PMarginTop)}
+	r.at = vg.Point{X: r.dc.Min.X, Y: r.at.Y - r.Size*vg.Length(r.PMarginTop)}
 	r.lineHeight = r.sty.Font.Size
 	for c := p.FirstChild; c != nil; c = c.NextSibling {
 		if at, err := r.draw(c); err != nil {
 			return at, err
 		}
 	}
-	r.at = vg.Point{X: 0, Y: r.at.Y - r.Size*(1+vg.Length(r.PMarginBottom))}
+	r.at = vg.Point{X: r.dc.Min.X, Y: r.at.Y - r.Size*(1+vg.Length(r.PMarginBottom))}
 	return r.at, nil
 }
 

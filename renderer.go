@@ -23,28 +23,46 @@ type Renderer struct {
 	draw.TextStyle
 
 	// PMarginTop and PMarginBottom are the margins before and
-	// after paragraphs. Defaults are 0 and 10 points, respectively.
-	PMarginTop, PMarginBottom vg.Length
+	// after paragraphs. Defaults are 0 and 0.833 text height units, respectively.
+	PMarginTop, PMarginBottom float64
 
-	// SuperscriptPosition, SubscriptPosition, and SuperSubSize
+	// H1Scale - H6Scale are font size scaling factors for headings.
+	// Defaults are 2.0, 1.5, 1.25, 1, 1, and 1, respectively.
+	H1Scale, H2Scale, H3Scale, H4Scale, H5Scale, H6Scale float64
+
+	// H*PMarginTop are the margins above headings.
+	// Default values are 1, 0.833, 0.75, 0.5, 0.5, and 0.5 respectively.
+	H1MarginTop, H2MarginTop, H3MarginTop, H4MarginTop, H5MarginTop, H6MarginTop float64
+
+	// H*PMarginBottom are the margins below headings.
+	// Default values are 1, 0.833, 0.75, 0.5, 0.5, and 0.5 respectively.
+	H1MarginBottom, H2MarginBottom, H3MarginBottom, H4MarginBottom, H5MarginBottom, H6MarginBottom float64
+
+	// SuperscriptPosition, SubscriptPosition, and SuperSubScale
 	// are the relative positions and sizes of superscripts and subscripts.
 	// Defaults are +0.25, -1.25, and 0.583, respectively.
-	SuperscriptPosition, SubscriptPosition, SuperSubSize float64
+	SuperscriptPosition, SubscriptPosition, SuperSubScale float64
 }
 
 func NewRenderer(font vg.Font) *Renderer {
-	return &Renderer{
+	r := &Renderer{
 		TextStyle: draw.TextStyle{
 			Color:  color.Black,
 			Font:   font,
 			XAlign: draw.XLeft,
 			YAlign: draw.YTop,
 		},
-		PMarginBottom:       vg.Points(10),
+		PMarginBottom:       0.833,
 		SuperscriptPosition: 0.25,
 		SubscriptPosition:   -1.25,
-		SuperSubSize:        0.583,
+		SuperSubScale:       0.583,
 	}
+	r.H1Scale, r.H2Scale, r.H3Scale, r.H4Scale, r.H5Scale, r.H6Scale = 2.0, 1.5, 1.25, 1, 1, 1
+	r.H1MarginTop, r.H2MarginTop, r.H3MarginTop, r.H4MarginTop, r.H5MarginTop, r.H6MarginTop =
+		1, 0.833, 0.75, 0.5, 0.5, 0.5
+	r.H1MarginBottom, r.H2MarginBottom, r.H3MarginBottom, r.H4MarginBottom, r.H5MarginBottom, r.H6MarginBottom =
+		1, 0.833, 0.75, 0.5, 0.5, 0.5
+	return r
 }
 
 // Draw renders the HTML input to canvas dc.
@@ -87,6 +105,18 @@ func (r *Renderer) element(e *html.Node) error {
 	switch e.Data {
 	case "p":
 		return r.paragraph(e)
+	case "h1":
+		return r.heading(e, r.H1Scale, r.H1MarginTop, r.H1MarginBottom)
+	case "h2":
+		return r.heading(e, r.H2Scale, r.H2MarginTop, r.H2MarginBottom)
+	case "h3":
+		return r.heading(e, r.H3Scale, r.H3MarginTop, r.H3MarginBottom)
+	case "h4":
+		return r.heading(e, r.H4Scale, r.H4MarginTop, r.H4MarginBottom)
+	case "h5":
+		return r.heading(e, r.H5Scale, r.H5MarginTop, r.H5MarginBottom)
+	case "h6":
+		return r.heading(e, r.H6Scale, r.H6MarginTop, r.H6MarginBottom)
 	case "sup":
 		return r.subsuperscript(e, vg.Length(r.SuperscriptPosition))
 	case "sub":
@@ -105,13 +135,13 @@ func (r *Renderer) element(e *html.Node) error {
 
 // paragraph renders an HTML p element.
 func (r *Renderer) paragraph(p *html.Node) error {
-	r.at = vg.Point{X: 0, Y: r.at.Y - r.PMarginTop}
+	r.at = vg.Point{X: 0, Y: r.at.Y - r.TextStyle.Font.Size*vg.Length(r.PMarginTop)}
 	for c := p.FirstChild; c != nil; c = c.NextSibling {
 		if err := r.draw(c); err != nil {
 			return err
 		}
 	}
-	r.at = vg.Point{X: 0, Y: r.at.Y - r.TextStyle.Font.Size - r.PMarginBottom}
+	r.at = vg.Point{X: 0, Y: r.at.Y - r.TextStyle.Font.Size*(1+vg.Length(r.PMarginBottom))}
 	return nil
 }
 
@@ -123,7 +153,7 @@ func (r *Renderer) text(t *html.Node) error {
 
 // subscript renders subscript text.
 func (r *Renderer) subscript(s *html.Node) error {
-	r.TextStyle.Font.Size *= vg.Length(r.SuperSubSize)
+	r.TextStyle.Font.Size *= vg.Length(r.SuperSubScale)
 	r.at.Y += r.TextStyle.Font.Size * vg.Length(r.SubscriptPosition)
 	for c := s.FirstChild; c != nil; c = c.NextSibling {
 		if err := r.draw(c); err != nil {
@@ -131,13 +161,13 @@ func (r *Renderer) subscript(s *html.Node) error {
 		}
 	}
 	r.at.Y = r.TextStyle.Font.Size * vg.Length(r.SubscriptPosition)
-	r.TextStyle.Font.Size /= vg.Length(r.SuperSubSize)
+	r.TextStyle.Font.Size /= vg.Length(r.SuperSubScale)
 	return nil
 }
 
 // subsuperscript renders superscript or subscript text.
 func (r *Renderer) subsuperscript(s *html.Node, position vg.Length) error {
-	r.TextStyle.Font.Size *= vg.Length(r.SuperSubSize)
+	r.TextStyle.Font.Size *= vg.Length(r.SuperSubScale)
 	r.at.Y += r.TextStyle.Font.Size * position
 	for c := s.FirstChild; c != nil; c = c.NextSibling {
 		if err := r.draw(c); err != nil {
@@ -145,7 +175,23 @@ func (r *Renderer) subsuperscript(s *html.Node, position vg.Length) error {
 		}
 	}
 	r.at.Y -= r.TextStyle.Font.Size * position
-	r.TextStyle.Font.Size /= vg.Length(r.SuperSubSize)
+	r.TextStyle.Font.Size /= vg.Length(r.SuperSubScale)
+	return nil
+}
+
+func (r *Renderer) heading(h *html.Node, scale, marginTop, marginBottom float64) error {
+	r.at.X = r.dc.Min.X
+	r.at.Y -= r.TextStyle.Font.Size * vg.Length(marginTop)
+	r.TextStyle.Font.Size *= vg.Length(scale)
+	for c := h.FirstChild; c != nil; c = c.NextSibling {
+		if err := r.draw(c); err != nil {
+			return err
+		}
+	}
+	r.at.Y -= r.TextStyle.Font.Size * vg.Length(marginBottom)
+	r.TextStyle.Font.Size /= vg.Length(scale)
+	r.at.X = r.dc.Min.X
+	r.at.Y -= r.TextStyle.Font.Size * vg.Length(marginBottom)
 	return nil
 }
 

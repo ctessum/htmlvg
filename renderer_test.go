@@ -44,6 +44,23 @@ Mauris et tellus sagittis, laoreet dui id, mollis erat. Duis ultrices facilisis 
 			width:    vg.Points(150),
 			height:   vg.Points(60),
 		},
+		{
+			html: `<h1>Heading 1</h1>
+<p>Paragraph</p>
+<h2>Heading 2</h2>
+<p>Paragraph</p>
+<h3>Heading 3</h3>
+<p>Paragraph</p>
+<h4>Heading 4</h4>
+<p>Paragraph</p>
+<h5>Heading 5</h5>
+<p>Paragraph</p>
+<h6>Heading 6</h6>
+<p>Paragraph</p>`,
+			filename: "testdata/headings.png",
+			width:    vg.Points(100),
+			height:   vg.Points(210),
+		},
 	}
 
 	for _, test := range tests {

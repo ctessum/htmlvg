@@ -151,20 +151,6 @@ func (r *Renderer) text(t *html.Node) error {
 	return nil
 }
 
-// subscript renders subscript text.
-func (r *Renderer) subscript(s *html.Node) error {
-	r.TextStyle.Font.Size *= vg.Length(r.SuperSubScale)
-	r.at.Y += r.TextStyle.Font.Size * vg.Length(r.SubscriptPosition)
-	for c := s.FirstChild; c != nil; c = c.NextSibling {
-		if err := r.draw(c); err != nil {
-			return err
-		}
-	}
-	r.at.Y = r.TextStyle.Font.Size * vg.Length(r.SubscriptPosition)
-	r.TextStyle.Font.Size /= vg.Length(r.SuperSubScale)
-	return nil
-}
-
 // subsuperscript renders superscript or subscript text.
 func (r *Renderer) subsuperscript(s *html.Node, position vg.Length) error {
 	r.TextStyle.Font.Size *= vg.Length(r.SuperSubScale)

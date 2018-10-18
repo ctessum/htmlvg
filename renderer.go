@@ -271,7 +271,10 @@ func (r *Renderer) writeLines(text string, sty draw.TextStyle) {
 		return r == ' ' || r == '-' // Function for choosing possible line breaks.
 	}
 
-	str := strings.Replace(text, "\n", " ", -1)
+	str := strings.Replace(text, " \n ", " ", -1)
+	str = strings.Replace(str, " \n", " ", -1)
+	str = strings.Replace(str, "\n ", " ", -1)
+	str = strings.Replace(str, "\n", " ", -1)
 
 	var lineStart int
 	var line string

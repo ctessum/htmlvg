@@ -40,10 +40,10 @@ Mauris et tellus sagittis, laoreet dui id, mollis erat. Duis ultrices facilisis 
 		},
 		{
 			html: `<p>Superscript and subscript don't currently work well with line breaks.</p>
-<p>Here we try s<sup>u</sup>per<sub>s</sub>cript and s<sub>ubsc</sub>ript. H<sub>2</sub>O<sup>(2)</sub> PM<sub>2.5</sub>`,
+<p>Here we try s<sup>u</sup>per<sub>s</sub>cript and s<sub>ubsc</sub>ript. H<sub>2</sub>O<sub>(2)</sub> PM<sub>2.5</sub>`,
 			filename: "testdata/supersub.png",
 			width:    vg.Points(150),
-			height:   vg.Points(60),
+			height:   vg.Points(70),
 		},
 		{
 			html: `<h1>Long Long Long Long Heading 1</h1>
@@ -73,6 +73,12 @@ Mauris et tellus sagittis, laoreet dui id, mollis erat. Duis ultrices facilisis 
 <hr>
 <p>Paragraph 2</p>`,
 			filename: "testdata/hr.png",
+			width:    vg.Points(100),
+			height:   vg.Points(50),
+		},
+		{
+			html:     `<p>This is a short paragraph with a long woooooooooooord.</p>`,
+			filename: "testdata/long_word.png",
 			width:    vg.Points(100),
 			height:   vg.Points(50),
 		},

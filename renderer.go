@@ -280,7 +280,26 @@ func (r *Renderer) writeLines(text string, sty draw.TextStyle) {
 		if len(str) > 1 {
 			nextBreak = strings.IndexFunc(str[lineStart+len(line)+1:], splitFunc)
 		}
-		lineEnd := lineStart + len(line) + 1 + nextBreak
+		var lineEnd int
+		if nextBreak == -1 {
+			lineEnd = len(str)
+		} else {
+			lineEnd = lineStart + len(line) + 1 + nextBreak
+		}
+
+		if sty.Font.Width(str[lineStart:lineEnd]) > r.dc.Max.X-r.at.X {
+			// If we go to the next break, will the line be too long? If so,
+			// insert a line break.
+			lineStart += len(line)
+			if r.at.X == r.dc.Min.X { // Remove any trailing space at the beginning of a line.
+				line = strings.TrimLeft(line, " ")
+			}
+			r.dc.FillText(sty, r.at, line)
+			r.newLine()
+			line = ""
+		} else {
+			line = str[lineStart:lineEnd]
+		}
 		if nextBreak == -1 {
 			out := str[lineStart:]
 			if r.at.X == r.dc.Min.X { // Remove any trailing space at the beginning of a line.
@@ -289,19 +308,11 @@ func (r *Renderer) writeLines(text string, sty draw.TextStyle) {
 			r.dc.FillText(sty, r.at, out)
 			r.at.X += sty.Width(out)
 			break
-		} else if sty.Font.Width(str[lineStart:lineEnd]) > r.dc.Max.X-r.at.X {
-			// If we go to the next break, will the line be too long? If so,
-			// insert a line break.
-			lineStart += len(line)
-			if r.at.X == r.dc.Min.X { // Remove any trailing space at the beginning of a line.
-				line = strings.TrimLeft(line, " ")
-			}
-			r.dc.FillText(sty, r.at, line)
-			r.at.X = r.dc.Min.X
-			r.at.Y -= r.lineHeight
-			line = ""
-		} else {
-			line = str[lineStart:lineEnd]
 		}
 	}
+}
+
+func (r *Renderer) newLine() {
+	r.at.X = r.dc.Min.X
+	r.at.Y -= r.lineHeight
 }

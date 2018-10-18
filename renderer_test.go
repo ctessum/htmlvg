@@ -82,6 +82,13 @@ Mauris et tellus sagittis, laoreet dui id, mollis erat. Duis ultrices facilisis 
 			width:    vg.Points(100),
 			height:   vg.Points(50),
 		},
+
+		{
+			html:     `<p>Here-we're-testing-words-with-dashes-words-with-dashes-words-with-dashes.</p>`,
+			filename: "testdata/dashes.png",
+			width:    vg.Points(100),
+			height:   vg.Points(50),
+		},
 	}
 
 	for _, test := range tests {

@@ -283,6 +283,10 @@ func (r *Renderer) writeLines(text string, sty draw.TextStyle) {
 		if len(str) > 1 {
 			nextBreak = strings.IndexFunc(str[lineStart+len(line)+1:], splitFunc)
 		}
+		if nextBreak != -1 && str[lineStart+len(line)+1+nextBreak] == '-' {
+			// Break line after dash, not before.
+			nextBreak += 1
+		}
 		var lineEnd int
 		if nextBreak == -1 {
 			lineEnd = len(str)

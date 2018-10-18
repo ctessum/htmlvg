@@ -67,6 +67,14 @@ Mauris et tellus sagittis, laoreet dui id, mollis erat. Duis ultrices facilisis 
 			width:    vg.Points(100),
 			height:   vg.Points(25),
 		},
+		{
+			html: `<p>Paragraph 1</p>
+<hr>
+<p>Paragraph 2</p>`,
+			filename: "testdata/hr.png",
+			width:    vg.Points(100),
+			height:   vg.Points(50),
+		},
 	}
 
 	for _, test := range tests {

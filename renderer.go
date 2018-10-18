@@ -56,6 +56,18 @@ type Renderer struct {
 	// are the relative positions and sizes of superscripts and subscripts.
 	// Defaults are +0.25, -1.25, and 0.583, respectively.
 	SuperscriptPosition, SubscriptPosition, SuperSubScale float64
+
+	// HRMarginTop and Bottom specify the spacing above and below horizontal
+	// rules. Defaults are 0.833 text height units.
+	HRMarginTop, HRMarginBottom float64
+
+	// HRScale specifies the width of horizontal rules. The
+	// default is 0.1 text height units.
+	HRScale float64
+
+	// HRColor specifies the color of horizontal rules. The
+	// default is black.
+	HRColor color.Color
 }
 
 func NewRenderer() *Renderer {
@@ -76,6 +88,9 @@ func NewRenderer() *Renderer {
 		true, true, true, true, true, false
 	r.Font, r.BoldFont, r.ItalicFont, r.BoldItalicFont =
 		"Helvetica", "Helvetica-Bold", "Helvetica-Oblique", "Helvetica-BoldOblique"
+	r.HRMarginTop, r.HRMarginBottom = 0.833, 0.833
+	r.HRScale = 0.1
+	r.HRColor = color.Black
 	return r
 }
 
@@ -147,6 +162,8 @@ func (r *Renderer) element(e *html.Node) (vg.Point, error) {
 		return r.newFont(e, r.BoldFont)
 	case "em", "i":
 		return r.newFont(e, r.ItalicFont)
+	case "hr":
+		return r.hr()
 	case "sup":
 		return r.subsuperscript(e, vg.Length(r.SuperscriptPosition))
 	case "sub":
@@ -219,6 +236,16 @@ func (r *Renderer) heading(h *html.Node, scale, marginTop, marginBottom float64,
 	r.sty.Font.Size /= vg.Length(scale)
 	r.at.X = r.dc.Min.X
 	r.at.Y -= r.Size * vg.Length(marginBottom)
+	return r.at, nil
+}
+
+func (r *Renderer) hr() (vg.Point, error) {
+	r.at.Y -= r.Size * vg.Length(r.HRMarginTop)
+	r.dc.StrokeLine2(draw.LineStyle{
+		Color: r.HRColor,
+		Width: r.Size * vg.Length(r.HRScale),
+	}, r.dc.Min.X, r.at.Y, r.dc.Max.X, r.at.Y)
+	r.at.Y -= r.Size * vg.Length(r.HRMarginBottom)
 	return r.at, nil
 }
 

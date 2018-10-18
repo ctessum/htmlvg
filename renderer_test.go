@@ -7,6 +7,7 @@ import (
 	"gonum.org/v1/plot/vg"
 	"gonum.org/v1/plot/vg/draw"
 	"gonum.org/v1/plot/vg/vgimg"
+	"gonum.org/v1/plot/vg/vgpdf"
 )
 
 func TestRenderer_Draw(t *testing.T) {
@@ -127,6 +128,28 @@ func TestRenderer_Draw_crop(t *testing.T) {
 	}
 	pngc := vgimg.PngCanvas{Canvas: c}
 	if _, err := pngc.WriteTo(w); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRenderer_pdf(t *testing.T) {
+	c := vgpdf.New(100, 80)
+	dc := draw.New(c)
+
+	r := NewRenderer()
+
+	if _, err := r.Draw(dc, []byte(`
+<h1>Heading 1</h1>
+<p>Here is some <strong>bold</strong> and <em>italic</em> text.</p>
+`)); err != nil {
+		t.Fatal(err)
+	}
+
+	w, err := os.Create("testdata/pdf_test.pdf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.WriteTo(w); err != nil {
 		t.Fatal(err)
 	}
 }

@@ -58,7 +58,7 @@ type CanvasWrapper struct {
 	SuperscriptPosition, SubscriptPosition, SuperSubScale float64
 
 	// HRMarginTop and Bottom specify the spacing above and below horizontal
-	// rules. Defaults are 0.833 text height units.
+	// rules. Defaults are 0.0 and 1.833 text height units, respectively.
 	HRMarginTop, HRMarginBottom float64
 
 	// HRScale specifies the width of horizontal rules. The
@@ -96,7 +96,7 @@ func WrapCanvas(dc draw.Canvas) *CanvasWrapper {
 		true, true, true, true, true, false
 	r.Font, r.BoldFont, r.ItalicFont, r.BoldItalicFont =
 		"Helvetica", "Helvetica-Bold", "Helvetica-Oblique", "Helvetica-BoldOblique"
-	r.HRMarginTop, r.HRMarginBottom = 0.833, 0.833
+	r.HRMarginTop, r.HRMarginBottom = 0.0, 1.833
 	r.HRScale = 0.1
 	r.HRColor = color.Black
 	return r

@@ -12,9 +12,9 @@ import (
 	"gonum.org/v1/plot/vg/draw"
 )
 
-// Renderer to renders HTML to a gonum.org/v1/plot/vg.Canvas.
-type Renderer struct {
-	dc         draw.Canvas
+// CanvasWrapper wraps a vg.Canvas (through draw.Canvas) to to render HTML.
+type CanvasWrapper struct {
+	draw.Canvas
 	mx         sync.Mutex
 	at         vg.Point
 	sty        draw.TextStyle
@@ -26,8 +26,8 @@ type Renderer struct {
 	// and "Helvetica-BoldOblique", respectively.
 	Font, BoldFont, ItalicFont, BoldItalicFont string
 
-	// Size is the base font size. The default is 12.
-	Size vg.Length
+	// FontSize is the base font size. The default is 12.
+	FontSize vg.Length
 
 	// Color is the font color.
 	Color color.Color
@@ -68,16 +68,24 @@ type Renderer struct {
 	// HRColor specifies the color of horizontal rules. The
 	// default is black.
 	HRColor color.Color
+
+	// BreakLines specifies if the text should be wrapped to the next line
+	// if it is too long. The default is true.
+	WrapLines bool
 }
 
-func NewRenderer() *Renderer {
-	r := &Renderer{
+// WrapCanvas takes a draw.Canvas and returns a vg.Canvas with the
+// the FillString method overwritten.
+func WrapCanvas(dc draw.Canvas) *CanvasWrapper {
+	r := &CanvasWrapper{
+		Canvas:              dc,
 		Color:               color.Black,
-		Size:                vg.Points(12),
+		FontSize:            vg.Points(12),
 		PMarginBottom:       0.833,
-		SuperscriptPosition: 0.25,
-		SubscriptPosition:   -1.25,
+		SuperscriptPosition: 0.75,
+		SubscriptPosition:   -0.25,
 		SuperSubScale:       0.583,
+		WrapLines:           true,
 	}
 	r.H1Scale, r.H2Scale, r.H3Scale, r.H4Scale, r.H5Scale, r.H6Scale = 2.0, 1.5, 1.25, 1, 1, 1
 	r.H1MarginTop, r.H2MarginTop, r.H3MarginTop, r.H4MarginTop, r.H5MarginTop, r.H6MarginTop =
@@ -94,12 +102,17 @@ func NewRenderer() *Renderer {
 	return r
 }
 
-// Draw renders the HTML input to canvas dc.
-// It returns the canvas coordinates of the cursor after drawing.
-func (r *Renderer) Draw(dc draw.Canvas, HTML []byte) (vg.Point, error) {
-	f, err := vg.MakeFont(r.Font, r.Size)
+// Size override vg.draw.Canvas.Size to match the signature of vg.Canvas.
+func (r *CanvasWrapper) Size() (vg.Length, vg.Length) {
+	p := r.Canvas.Size()
+	return p.X, p.Y
+}
+
+// FillString overrides vg.Canvas.FillString to renders the HTML input.
+func (r *CanvasWrapper) FillString(_ vg.Font, pt vg.Point, HTML string) {
+	f, err := vg.MakeFont(r.Font, r.FontSize)
 	if err != nil {
-		return r.at, err
+		panic(err)
 	}
 	r.sty = draw.TextStyle{
 		Font:   f,
@@ -110,16 +123,18 @@ func (r *Renderer) Draw(dc draw.Canvas, HTML []byte) (vg.Point, error) {
 
 	r.mx.Lock()
 	defer r.mx.Unlock()
-	r.dc = dc
-	r.at = vg.Point{X: dc.Min.X, Y: dc.Max.Y}
-	doc, err := html.Parse(bytes.NewBuffer(HTML))
+	r.at = pt
+	doc, err := html.Parse(bytes.NewBuffer([]byte(HTML)))
 	if err != nil {
-		return r.at, fmt.Errorf("htmlvg: %v", err)
+		panic(fmt.Errorf("htmlvg: %v", err))
 	}
-	return r.draw(doc)
+	_, err = r.draw(doc)
+	if err != nil {
+		panic(err)
+	}
 }
 
-func (r *Renderer) draw(n *html.Node) (vg.Point, error) {
+func (r *CanvasWrapper) draw(n *html.Node) (vg.Point, error) {
 	switch n.Type {
 	case html.ErrorNode:
 		return r.at, fmt.Errorf("htmlvg: node error: %+v", n)
@@ -142,7 +157,7 @@ func (r *Renderer) draw(n *html.Node) (vg.Point, error) {
 }
 
 // element renders an HTML element.
-func (r *Renderer) element(e *html.Node) (vg.Point, error) {
+func (r *CanvasWrapper) element(e *html.Node) (vg.Point, error) {
 	switch e.Data {
 	case "p":
 		return r.paragraph(e)
@@ -181,26 +196,26 @@ func (r *Renderer) element(e *html.Node) (vg.Point, error) {
 }
 
 // paragraph renders an HTML p element.
-func (r *Renderer) paragraph(p *html.Node) (vg.Point, error) {
-	r.at = vg.Point{X: r.dc.Min.X, Y: r.at.Y - r.Size*vg.Length(r.PMarginTop)}
+func (r *CanvasWrapper) paragraph(p *html.Node) (vg.Point, error) {
+	r.at = vg.Point{X: r.Canvas.Min.X, Y: r.at.Y - r.FontSize*vg.Length(r.PMarginTop)}
 	r.lineHeight = r.sty.Font.Size
 	for c := p.FirstChild; c != nil; c = c.NextSibling {
 		if at, err := r.draw(c); err != nil {
 			return at, err
 		}
 	}
-	r.at = vg.Point{X: r.dc.Min.X, Y: r.at.Y - r.Size*(1+vg.Length(r.PMarginBottom))}
+	r.at = vg.Point{X: r.Canvas.Min.X, Y: r.at.Y - r.FontSize*(1+vg.Length(r.PMarginBottom))}
 	return r.at, nil
 }
 
 // text renders HTML normal text.
-func (r *Renderer) text(t *html.Node) (vg.Point, error) {
+func (r *CanvasWrapper) text(t *html.Node) (vg.Point, error) {
 	r.writeLines(t.Data, r.sty)
 	return r.at, nil
 }
 
 // subsuperscript renders superscript or subscript text.
-func (r *Renderer) subsuperscript(s *html.Node, position vg.Length) (vg.Point, error) {
+func (r *CanvasWrapper) subsuperscript(s *html.Node, position vg.Length) (vg.Point, error) {
 	r.sty.Font.Size *= vg.Length(r.SuperSubScale)
 	r.at.Y += r.sty.Font.Size * position
 	for c := s.FirstChild; c != nil; c = c.NextSibling {
@@ -213,7 +228,7 @@ func (r *Renderer) subsuperscript(s *html.Node, position vg.Length) (vg.Point, e
 	return r.at, nil
 }
 
-func (r *Renderer) heading(h *html.Node, scale, marginTop, marginBottom float64, bold bool) (vg.Point, error) {
+func (r *CanvasWrapper) heading(h *html.Node, scale, marginTop, marginBottom float64, bold bool) (vg.Point, error) {
 	if bold {
 		f := r.sty.Font
 		if err := r.sty.Font.SetName(r.BoldFont); err != nil {
@@ -223,8 +238,8 @@ func (r *Renderer) heading(h *html.Node, scale, marginTop, marginBottom float64,
 			r.sty.Font = f
 		}()
 	}
-	r.at.X = r.dc.Min.X
-	r.at.Y -= r.Size * vg.Length(marginTop)
+	r.at.X = r.Canvas.Min.X
+	r.at.Y -= r.FontSize * vg.Length(marginTop)
 	r.sty.Font.Size *= vg.Length(scale)
 	r.lineHeight = r.sty.Font.Size
 	for c := h.FirstChild; c != nil; c = c.NextSibling {
@@ -234,23 +249,23 @@ func (r *Renderer) heading(h *html.Node, scale, marginTop, marginBottom float64,
 	}
 	r.at.Y -= r.sty.Font.Size * vg.Length(marginBottom)
 	r.sty.Font.Size /= vg.Length(scale)
-	r.at.X = r.dc.Min.X
-	r.at.Y -= r.Size * vg.Length(marginBottom)
+	r.at.X = r.Canvas.Min.X
+	r.at.Y -= r.FontSize * vg.Length(marginBottom)
 	return r.at, nil
 }
 
-func (r *Renderer) hr() (vg.Point, error) {
-	r.at.Y -= r.Size * vg.Length(r.HRMarginTop)
-	r.dc.StrokeLine2(draw.LineStyle{
+func (r *CanvasWrapper) hr() (vg.Point, error) {
+	r.at.Y -= r.FontSize * vg.Length(r.HRMarginTop)
+	r.Canvas.StrokeLine2(draw.LineStyle{
 		Color: r.HRColor,
-		Width: r.Size * vg.Length(r.HRScale),
-	}, r.dc.Min.X, r.at.Y, r.dc.Max.X, r.at.Y)
-	r.at.Y -= r.Size * vg.Length(r.HRMarginBottom)
+		Width: r.FontSize * vg.Length(r.HRScale),
+	}, r.Canvas.Min.X, r.at.Y, r.Canvas.Max.X, r.at.Y)
+	r.at.Y -= r.FontSize * vg.Length(r.HRMarginBottom)
 	return r.at, nil
 }
 
 // newFont temporarily changes the font.
-func (r *Renderer) newFont(n *html.Node, font string) (vg.Point, error) {
+func (r *CanvasWrapper) newFont(n *html.Node, font string) (vg.Point, error) {
 	f := r.sty.Font
 	if err := r.sty.Font.SetName(font); err != nil {
 		return r.at, err
@@ -266,7 +281,7 @@ func (r *Renderer) newFont(n *html.Node, font string) (vg.Point, error) {
 
 // writeLines writes the given text to the canvas, inserting line breaks
 // as necessary.
-func (r *Renderer) writeLines(text string, sty draw.TextStyle) {
+func (r *CanvasWrapper) writeLines(text string, sty draw.TextStyle) {
 	splitFunc := func(r rune) bool {
 		return r == ' ' || r == '-' // Function for choosing possible line breaks.
 	}
@@ -285,7 +300,7 @@ func (r *Renderer) writeLines(text string, sty draw.TextStyle) {
 		}
 		if nextBreak != -1 && str[lineStart+len(line)+1+nextBreak] == '-' {
 			// Break line after dash, not before.
-			nextBreak += 1
+			nextBreak++
 		}
 		var lineEnd int
 		if nextBreak == -1 {
@@ -294,14 +309,14 @@ func (r *Renderer) writeLines(text string, sty draw.TextStyle) {
 			lineEnd = lineStart + len(line) + 1 + nextBreak
 		}
 
-		if sty.Font.Width(str[lineStart:lineEnd]) > r.dc.Max.X-r.at.X {
+		if r.WrapLines && sty.Font.Width(str[lineStart:lineEnd]) > r.Canvas.Max.X-r.at.X {
 			// If we go to the next break, will the line be too long? If so,
 			// insert a line break.
 			lineStart += len(line)
-			if r.at.X == r.dc.Min.X { // Remove any trailing space at the beginning of a line.
+			if r.at.X == r.Canvas.Min.X { // Remove any trailing space at the beginning of a line.
 				line = strings.TrimLeft(line, " ")
 			}
-			r.dc.FillText(sty, r.at, line)
+			r.Canvas.Canvas.FillString(sty.Font, r.at, line)
 			r.newLine()
 			line = ""
 		} else {
@@ -309,17 +324,17 @@ func (r *Renderer) writeLines(text string, sty draw.TextStyle) {
 		}
 		if nextBreak == -1 {
 			out := str[lineStart:]
-			if r.at.X == r.dc.Min.X { // Remove any trailing space at the beginning of a line.
+			if r.at.X == r.Canvas.Min.X { // Remove any trailing space at the beginning of a line.
 				out = strings.TrimLeft(out, " ")
 			}
-			r.dc.FillText(sty, r.at, out)
+			r.Canvas.Canvas.FillString(sty.Font, r.at, out)
 			r.at.X += sty.Width(out)
 			break
 		}
 	}
 }
 
-func (r *Renderer) newLine() {
-	r.at.X = r.dc.Min.X
+func (r *CanvasWrapper) newLine() {
+	r.at.X = r.Canvas.Min.X
 	r.at.Y -= r.lineHeight
 }
